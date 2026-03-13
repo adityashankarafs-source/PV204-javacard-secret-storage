@@ -25,11 +25,14 @@ public class Main {
                 }
                 System.out.println("Storing secret: " + args[1]);
                 cardManager.sendCommand("STORE_SECRET");
+                System.out.println("Secret stored successfully (mock output).");
                 break;
 
             case "list":
                 System.out.println("Listing secrets...");
                 cardManager.sendCommand("LIST_SECRETS");
+                System.out.println("- gmail");
+                System.out.println("- bank");
                 break;
 
             case "get":
@@ -39,6 +42,7 @@ public class Main {
                 }
                 System.out.println("Retrieving secret: " + args[1]);
                 cardManager.sendCommand("GET_SECRET");
+                System.out.println("Secret value: mock-secret-value");
                 break;
 
             case "change-pin":
@@ -48,6 +52,7 @@ public class Main {
                 }
                 System.out.println("Changing PIN...");
                 cardManager.sendCommand("CHANGE_PIN");
+                System.out.println("PIN changed successfully (mock output).");
                 break;
 
             default:
