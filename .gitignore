@@ -1,1 +1,6 @@
+
 *.class
+.gradle/
+build/
+out/
+
