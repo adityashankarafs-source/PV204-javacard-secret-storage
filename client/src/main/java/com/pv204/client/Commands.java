@@ -1,8 +1,9 @@
 package com.pv204.client;
 
 public class Commands {
-    public static final byte STORE_SECRET = 0x10;
-    public static final byte LIST_SECRETS = 0x20;
-    public static final byte GET_SECRET = 0x30;
-    public static final byte CHANGE_PIN = 0x40;
+
+    public static final String ADD = "add";
+    public static final String LIST = "list";
+    public static final String GET = "get";
+    public static final String CHANGE_PIN = "change-pin";
 }

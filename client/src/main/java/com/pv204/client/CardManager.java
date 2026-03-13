@@ -1,12 +1,36 @@
 package com.pv204.client;
 
+import java.util.List;
+
 public class CardManager {
 
-    public void connect() {
-        System.out.println("Connecting to card simulator...");
+    private MockCardBackend backend;
+
+    public CardManager(MockCardBackend backend) {
+        this.backend = backend;
     }
 
-    public void sendCommand(String command) {
-        System.out.println("Simulating command send: " + command);
+    public ClientResponse handle(ClientRequest request) {
+
+        switch (request.getCommand()) {
+
+            case "add":
+                backend.addSecret(request.getName(), request.getValue());
+                return new ClientResponse(true, "Secret '" + request.getName() + "' stored successfully.");
+
+            case "list":
+                List<String> names = backend.listSecrets();
+                return new ClientResponse(true, "Stored secrets:", names);
+
+            case "get":
+                String value = backend.getSecret(request.getName());
+                if (value == null) {
+                    return new ClientResponse(false, "Secret not found.");
+                }
+                return new ClientResponse(true, value);
+
+            default:
+                return new ClientResponse(false, "Unknown command.");
+        }
     }
 }

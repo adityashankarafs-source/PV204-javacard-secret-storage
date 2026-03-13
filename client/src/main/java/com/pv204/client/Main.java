@@ -1,98 +1,46 @@
 package com.pv204.client;
 
+import java.util.List;
+
 public class Main {
+
     public static void main(String[] args) {
-        System.out.println("=== PV204 JavaCard Secret Storage Client ===");
+
+        System.out.println("PV204 JavaCard Secret Storage Client");
 
         if (args.length == 0) {
-            printHelp();
+            printUsage();
             return;
         }
 
-        String command = args[0].toLowerCase();
-        CardManager cardManager = new CardManager();
-        cardManager.connect();
+        CommandParser parser = new CommandParser();
+        ClientRequest request = parser.parse(args);
 
-        switch (command) {
-            case "add":
-                handleAdd(args, cardManager);
-                break;
+        System.out.println("Connecting to JavaCard simulator...");
 
-            case "list":
-                handleList(cardManager);
-                break;
+        CardManager cardManager = new CardManager(new MockCardBackend());
 
-            case "get":
-                handleGet(args, cardManager);
-                break;
+        ClientResponse response = cardManager.handle(request);
 
-            case "change-pin":
-                handleChangePin(args, cardManager);
-                break;
+        if (response.getData() != null) {
 
-            case "help":
-                printHelp();
-                break;
+            System.out.println(response.getMessage());
 
-            default:
-                System.out.println("Unknown command: " + command);
-                printHelp();
+            for (String s : response.getData()) {
+                System.out.println("- " + s);
+            }
+
+        } else {
+            System.out.println(response.getMessage());
         }
     }
 
-    private static void handleAdd(String[] args, CardManager cardManager) {
-        if (args.length < 3) {
-            System.out.println("Usage: add <name> <value>");
-            return;
-        }
+    private static void printUsage() {
 
-        String name = args[1];
-        String value = args[2];
-
-        System.out.println("Action: Store Secret");
-        System.out.println("Secret name: " + name);
-        cardManager.sendCommand("STORE_SECRET");
-        System.out.println("Result: Secret stored successfully (mock output).");
-    }
-
-    private static void handleList(CardManager cardManager) {
-        System.out.println("Action: List Secrets");
-        cardManager.sendCommand("LIST_SECRETS");
-        System.out.println("Stored secrets:");
-        System.out.println("- gmail");
-        System.out.println("- bank");
-    }
-
-    private static void handleGet(String[] args, CardManager cardManager) {
-        if (args.length < 2) {
-            System.out.println("Usage: get <name>");
-            return;
-        }
-
-        String name = args[1];
-        System.out.println("Action: Get Secret");
-        System.out.println("Secret name: " + name);
-        cardManager.sendCommand("GET_SECRET");
-        System.out.println("Result: Secret value = mock-secret-value");
-    }
-
-    private static void handleChangePin(String[] args, CardManager cardManager) {
-        if (args.length < 3) {
-            System.out.println("Usage: change-pin <oldPin> <newPin>");
-            return;
-        }
-
-        System.out.println("Action: Change PIN");
-        cardManager.sendCommand("CHANGE_PIN");
-        System.out.println("Result: PIN changed successfully (mock output).");
-    }
-
-    private static void printHelp() {
         System.out.println("Usage:");
         System.out.println("  add <name> <value>");
         System.out.println("  list");
         System.out.println("  get <name>");
         System.out.println("  change-pin <oldPin> <newPin>");
-        System.out.println("  help");
     }
 }
