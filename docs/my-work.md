@@ -1,15 +1,22 @@
 # Ujjawal's Contribution
 
-## Completed Work
-- created initial repository structure
-- created client-side Java skeleton
-- implemented CLI command handling for:
+## Implemented Work
+- initial repository structure
+- Java client skeleton
+- command handling for:
+  - help
   - add
   - list
   - get
   - change-pin
-- added architecture documentation
-- updated README with project overview and usage examples
+- improved client output for demo visibility
+- architecture documentation
+- client usage guide
+- test scenarios documentation
+- README improvements
+- repository cleanup with .gitignore
 
-## Notes
-Current client outputs are mock outputs and will later be connected to the JavaCard applet and secure communication layer.
+## Planned Next Support
+- align client commands with final applet command values
+- support integration testing
+- help prepare demo flow and run instructions

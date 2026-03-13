@@ -58,3 +58,16 @@ java -cp client/src/main/java com.pv204.client.Main list
 java -cp client/src/main/java com.pv204.client.Main add gmail mypassword
 java -cp client/src/main/java com.pv204.client.Main get gmail
 java -cp client/src/main/java com.pv204.client.Main change-pin 1234 5678
+
+## Current Project Status
+- initial client prototype implemented
+- architecture documentation prepared
+- usage and test scenario documents prepared
+- ready for integration with applet and secure communication
+
+## Visible Client Features
+- help command
+- add secret command
+- list secrets command
+- get secret command
+- change-pin command

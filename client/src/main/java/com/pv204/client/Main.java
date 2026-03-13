@@ -2,62 +2,97 @@ package com.pv204.client;
 
 public class Main {
     public static void main(String[] args) {
-        System.out.println("PV204 JavaCard Secret Storage Client");
+        System.out.println("=== PV204 JavaCard Secret Storage Client ===");
 
         if (args.length == 0) {
-            System.out.println("Usage:");
-            System.out.println("  add <name> <value>");
-            System.out.println("  list");
-            System.out.println("  get <name>");
-            System.out.println("  change-pin <oldPin> <newPin>");
+            printHelp();
             return;
         }
 
-        String command = args[0];
+        String command = args[0].toLowerCase();
         CardManager cardManager = new CardManager();
         cardManager.connect();
 
         switch (command) {
             case "add":
-                if (args.length < 3) {
-                    System.out.println("Usage: add <name> <value>");
-                    return;
-                }
-                System.out.println("Storing secret: " + args[1]);
-                cardManager.sendCommand("STORE_SECRET");
-                System.out.println("Secret stored successfully (mock output).");
+                handleAdd(args, cardManager);
                 break;
 
             case "list":
-                System.out.println("Listing secrets...");
-                cardManager.sendCommand("LIST_SECRETS");
-                System.out.println("- gmail");
-                System.out.println("- bank");
+                handleList(cardManager);
                 break;
 
             case "get":
-                if (args.length < 2) {
-                    System.out.println("Usage: get <name>");
-                    return;
-                }
-                System.out.println("Retrieving secret: " + args[1]);
-                cardManager.sendCommand("GET_SECRET");
-                System.out.println("Secret value: mock-secret-value");
+                handleGet(args, cardManager);
                 break;
 
             case "change-pin":
-                if (args.length < 3) {
-                    System.out.println("Usage: change-pin <oldPin> <newPin>");
-                    return;
-                }
-                System.out.println("Changing PIN...");
-                cardManager.sendCommand("CHANGE_PIN");
-                System.out.println("PIN changed successfully (mock output).");
+                handleChangePin(args, cardManager);
+                break;
+
+            case "help":
+                printHelp();
                 break;
 
             default:
                 System.out.println("Unknown command: " + command);
-                System.out.println("Available commands: add, list, get, change-pin");
+                printHelp();
         }
+    }
+
+    private static void handleAdd(String[] args, CardManager cardManager) {
+        if (args.length < 3) {
+            System.out.println("Usage: add <name> <value>");
+            return;
+        }
+
+        String name = args[1];
+        String value = args[2];
+
+        System.out.println("Action: Store Secret");
+        System.out.println("Secret name: " + name);
+        cardManager.sendCommand("STORE_SECRET");
+        System.out.println("Result: Secret stored successfully (mock output).");
+    }
+
+    private static void handleList(CardManager cardManager) {
+        System.out.println("Action: List Secrets");
+        cardManager.sendCommand("LIST_SECRETS");
+        System.out.println("Stored secrets:");
+        System.out.println("- gmail");
+        System.out.println("- bank");
+    }
+
+    private static void handleGet(String[] args, CardManager cardManager) {
+        if (args.length < 2) {
+            System.out.println("Usage: get <name>");
+            return;
+        }
+
+        String name = args[1];
+        System.out.println("Action: Get Secret");
+        System.out.println("Secret name: " + name);
+        cardManager.sendCommand("GET_SECRET");
+        System.out.println("Result: Secret value = mock-secret-value");
+    }
+
+    private static void handleChangePin(String[] args, CardManager cardManager) {
+        if (args.length < 3) {
+            System.out.println("Usage: change-pin <oldPin> <newPin>");
+            return;
+        }
+
+        System.out.println("Action: Change PIN");
+        cardManager.sendCommand("CHANGE_PIN");
+        System.out.println("Result: PIN changed successfully (mock output).");
+    }
+
+    private static void printHelp() {
+        System.out.println("Usage:");
+        System.out.println("  add <name> <value>");
+        System.out.println("  list");
+        System.out.println("  get <name>");
+        System.out.println("  change-pin <oldPin> <newPin>");
+        System.out.println("  help");
     }
 }
