@@ -1,6 +1,5 @@
-
+.vs/
 *.class
-.gradle/
+*.log
 build/
-out/
-
+.gradle/
