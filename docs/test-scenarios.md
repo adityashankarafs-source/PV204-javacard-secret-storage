@@ -29,3 +29,10 @@
 - retrieve a secret only after correct PIN verification
 - reject access on wrong PIN
 - verify PIN change works
+
+## Basic Attacker Considerations
+
+- replay attack -> should be prevented using counters
+- unauthorized access -> protected using PIN verification
+- data leakage -> communication should be protected using secure session
+- insecure key storage -> hardcoded keys should be avoided

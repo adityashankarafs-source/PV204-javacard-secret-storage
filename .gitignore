@@ -1,5 +1,2 @@
-.vs/
 *.class
-*.log
-build/
-.gradle/
+mingw64/

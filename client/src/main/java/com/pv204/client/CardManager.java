@@ -1,36 +1,30 @@
 package com.pv204.client;
 
-import java.util.List;
-
 public class CardManager {
 
-    private MockCardBackend backend;
+    private String masterKey;
 
-    public CardManager(MockCardBackend backend) {
-        this.backend = backend;
+    public CardManager() {
+        this.masterKey = System.getenv("MASTER_KEY");
+
+        if (this.masterKey == null) {
+            System.out.println("Warning: MASTER_KEY not set. Using default (insecure).");
+            this.masterKey = "default-key";
+        }
     }
 
-    public ClientResponse handle(ClientRequest request) {
+    public void connect() {
+        System.out.println("Connecting to card simulator...");
+    }
 
-        switch (request.getCommand()) {
+    public void openSecureSession() {
+        System.out.println("Opening secure session...");
+        System.out.println("Exchanging nonces...");
+        System.out.println("Deriving session key...");
+        System.out.println("Secure session established (mock).");
+    }
 
-            case "add":
-                backend.addSecret(request.getName(), request.getValue());
-                return new ClientResponse(true, "Secret '" + request.getName() + "' stored successfully.");
-
-            case "list":
-                List<String> names = backend.listSecrets();
-                return new ClientResponse(true, "Stored secrets:", names);
-
-            case "get":
-                String value = backend.getSecret(request.getName());
-                if (value == null) {
-                    return new ClientResponse(false, "Secret not found.");
-                }
-                return new ClientResponse(true, value);
-
-            default:
-                return new ClientResponse(false, "Unknown command.");
-        }
+    public void sendCommand(String command) {
+        System.out.println("Simulating command send: " + command);
     }
 }
