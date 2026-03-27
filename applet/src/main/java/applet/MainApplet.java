@@ -15,7 +15,7 @@ public class MainApplet extends Applet implements Constants {
     private final OwnerPIN pin;
     private final SecretStore secretStore;
 
-    private final byte[] masterKey;
+    private final byte[] provisionedKey;
     private final byte[] clientNonce;
     private final byte[] cardNonce;
     private final byte[] sessionKey;
@@ -23,6 +23,7 @@ public class MainApplet extends Applet implements Constants {
     private final byte[] digestBuffer;
 
     private boolean secureChannelOpen;
+    private boolean keyInitialized;
 
     private final RandomData random;
     private final MessageDigest sha256;
@@ -35,13 +36,7 @@ public class MainApplet extends Applet implements Constants {
 
         secretStore = new SecretStore();
 
-        masterKey = new byte[] {
-                0x11, 0x22, 0x33, 0x44,
-                0x55, 0x66, 0x77, (byte) 0x88,
-                0x21, 0x32, 0x43, 0x54,
-                0x65, 0x76, 0x07, 0x18
-        };
-
+        provisionedKey = new byte[MASTER_KEY_LEN];
         clientNonce = new byte[NONCE_LEN];
         cardNonce = new byte[NONCE_LEN];
         sessionKey = new byte[SESSION_KEY_LEN];
@@ -49,6 +44,7 @@ public class MainApplet extends Applet implements Constants {
         digestBuffer = new byte[32];
 
         secureChannelOpen = false;
+        keyInitialized = false;
 
         random = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
         sha256 = MessageDigest.getInstance(MessageDigest.ALG_SHA_256, false);
@@ -105,6 +101,10 @@ public class MainApplet extends Applet implements Constants {
                 getSecret(apdu);
                 return;
 
+            case INS_INIT_MASTER_KEY:
+                initMasterKey(apdu);
+                return;
+
             case INS_OPEN_SECURE_CHANNEL:
                 openSecureChannel(apdu);
                 return;
@@ -146,6 +146,12 @@ public class MainApplet extends Applet implements Constants {
         }
     }
 
+    private void requireProvisionedKey() {
+        if (!keyInitialized) {
+            ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
+        }
+    }
+
     private void verifyPin(APDU apdu) {
         byte[] buffer = apdu.getBuffer();
         short len = apdu.setIncomingAndReceive();
@@ -183,7 +189,22 @@ public class MainApplet extends Applet implements Constants {
         apdu.setOutgoingAndSend((short) 0, outLen);
     }
 
+    private void initMasterKey(APDU apdu) {
+        byte[] buffer = apdu.getBuffer();
+        short len = apdu.setIncomingAndReceive();
+
+        if (len != MASTER_KEY_LEN) {
+            ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
+        }
+
+        Util.arrayCopy(buffer, ISO7816.OFFSET_CDATA, provisionedKey, (short) 0, MASTER_KEY_LEN);
+        keyInitialized = true;
+        secureChannelOpen = false;
+    }
+
     private void openSecureChannel(APDU apdu) {
+        requireProvisionedKey();
+
         byte[] buffer = apdu.getBuffer();
         short len = apdu.setIncomingAndReceive();
 
@@ -259,7 +280,7 @@ public class MainApplet extends Applet implements Constants {
     private void deriveSessionKey() {
         short pos = 0;
 
-        Util.arrayCopy(masterKey, (short) 0, digestBuffer, pos, MASTER_KEY_LEN);
+        Util.arrayCopy(provisionedKey, (short) 0, digestBuffer, pos, MASTER_KEY_LEN);
         pos += MASTER_KEY_LEN;
 
         Util.arrayCopy(clientNonce, (short) 0, digestBuffer, pos, NONCE_LEN);
