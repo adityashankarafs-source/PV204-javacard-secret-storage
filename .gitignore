@@ -1,2 +1,12 @@
 *.class
 mingw64/
+*.class
+.gradle/
+.vs/
+build/
+out/
+
+
+
+
+
