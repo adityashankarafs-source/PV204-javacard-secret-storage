@@ -1,3 +1,4 @@
+
 package applet;
 
 import com.licel.jcardsim.smartcardio.CardSimulator;
@@ -16,11 +17,20 @@ public class MainAppletTest {
 
     private static final byte CLA = (byte) 0xB0;
 
-    private static final byte INS_VERIFY_PIN   = 0x10;
-    private static final byte INS_CHANGE_PIN   = 0x11;
-    private static final byte INS_STORE_SECRET = 0x20;
-    private static final byte INS_LIST_SECRETS = 0x21;
-    private static final byte INS_GET_SECRET   = 0x22;
+    private static final byte INS_VERIFY_PIN          = 0x10;
+    private static final byte INS_CHANGE_PIN          = 0x11;
+    private static final byte INS_STORE_SECRET        = 0x20;
+    private static final byte INS_LIST_SECRETS        = 0x21;
+    private static final byte INS_GET_SECRET          = 0x22;
+    private static final byte INS_OPEN_SECURE_CHANNEL = 0x30;
+    private static final byte INS_INIT_MASTER_KEY     = 0x35;
+
+    private static final short SW_PIN_REQUIRED = (short) 0x6301;
+    private static final short SW_WRONG_LENGTH = (short) 0x6700;
+    private static final short SW_CONDITIONS_NOT_SATISFIED = (short) 0x6985;
+
+    private static final int NONCE_LEN = 8;
+    private static final int MASTER_KEY_LEN = 16;
 
     private CardSimulator simulator;
 
@@ -35,7 +45,7 @@ public class MainAppletTest {
     @Test
     void getSecretWithoutPinFails() {
         ResponseAPDU response = transmit(apdu(INS_GET_SECRET, encodeName("gmail")));
-        assertEquals(0x6301, response.getSW());
+        assertEquals(SW_PIN_REQUIRED, (short) response.getSW());
     }
 
     @Test
@@ -81,6 +91,35 @@ public class MainAppletTest {
     void changePinWithWrongOldPinFails() {
         ResponseAPDU response = transmit(apdu(INS_CHANGE_PIN, encodeChangePin("9999", "5678")));
         assertEquals(0x6982, response.getSW());
+    }
+
+    @Test
+    void openSecureChannelWithoutKeyFails() {
+        ResponseAPDU response = transmit(apdu(INS_OPEN_SECURE_CHANNEL, sampleNonce()));
+        assertEquals(SW_CONDITIONS_NOT_SATISFIED, (short) response.getSW());
+    }
+
+    @Test
+    void initMasterKeySucceeds() {
+        ResponseAPDU response = transmit(apdu(INS_INIT_MASTER_KEY, sampleMasterKey()));
+        assertEquals(0x9000, response.getSW());
+    }
+
+    @Test
+    void initMasterKeyWithWrongLengthFails() {
+        byte[] wrongKey = new byte[] { 1, 2, 3, 4, 5 };
+        ResponseAPDU response = transmit(apdu(INS_INIT_MASTER_KEY, wrongKey));
+        assertEquals(SW_WRONG_LENGTH, (short) response.getSW());
+    }
+
+    @Test
+    void openSecureChannelAfterInitWorks() {
+        assertEquals(0x9000, transmit(apdu(INS_INIT_MASTER_KEY, sampleMasterKey())).getSW());
+
+        ResponseAPDU response = transmit(apdu(INS_OPEN_SECURE_CHANNEL, sampleNonce()));
+
+        assertEquals(0x9000, response.getSW());
+        assertEquals(NONCE_LEN, response.getData().length);
     }
 
     private ResponseAPDU transmit(CommandAPDU cmd) {
@@ -131,5 +170,21 @@ public class MainAppletTest {
         System.arraycopy(newBytes, 0, out, pos, newBytes.length);
 
         return out;
+    }
+
+    private byte[] sampleMasterKey() {
+        return new byte[] {
+                0x01, 0x02, 0x03, 0x04,
+                0x05, 0x06, 0x07, 0x08,
+                0x09, 0x0A, 0x0B, 0x0C,
+                0x0D, 0x0E, 0x0F, 0x10
+        };
+    }
+
+    private byte[] sampleNonce() {
+        return new byte[] {
+                0x11, 0x12, 0x13, 0x14,
+                0x15, 0x16, 0x17, 0x18
+        };
     }
 }
