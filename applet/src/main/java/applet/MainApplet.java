@@ -93,6 +93,7 @@ public class MainApplet extends Applet implements Constants {
                 return;
 
             case INS_LIST_SECRETS:
+                requirePin();
                 listSecrets(apdu);
                 return;
 

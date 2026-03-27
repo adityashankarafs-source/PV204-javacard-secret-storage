@@ -1,4 +1,3 @@
-
 package applet;
 
 import com.licel.jcardsim.smartcardio.CardSimulator;
@@ -30,7 +29,6 @@ public class MainAppletTest {
     private static final short SW_CONDITIONS_NOT_SATISFIED = (short) 0x6985;
 
     private static final int NONCE_LEN = 8;
-    private static final int MASTER_KEY_LEN = 16;
 
     private CardSimulator simulator;
 
@@ -45,6 +43,12 @@ public class MainAppletTest {
     @Test
     void getSecretWithoutPinFails() {
         ResponseAPDU response = transmit(apdu(INS_GET_SECRET, encodeName("gmail")));
+        assertEquals(SW_PIN_REQUIRED, (short) response.getSW());
+    }
+
+    @Test
+    void listSecretsWithoutPinFails() {
+        ResponseAPDU response = transmit(apdu(INS_LIST_SECRETS, new byte[0]));
         assertEquals(SW_PIN_REQUIRED, (short) response.getSW());
     }
 
