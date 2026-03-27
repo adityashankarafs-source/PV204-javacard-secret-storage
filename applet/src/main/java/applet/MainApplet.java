@@ -24,6 +24,7 @@ public class MainApplet extends Applet implements Constants {
 
     private boolean secureChannelOpen;
     private boolean keyInitialized;
+    private short sessionCounter;
 
     private final RandomData random;
     private final MessageDigest sha256;
@@ -41,10 +42,11 @@ public class MainApplet extends Applet implements Constants {
         cardNonce = new byte[NONCE_LEN];
         sessionKey = new byte[SESSION_KEY_LEN];
         macBuffer = JCSystem.makeTransientByteArray(MAC_LEN, JCSystem.CLEAR_ON_DESELECT);
-        digestBuffer = new byte[32];
+        digestBuffer = new byte[64];
 
         secureChannelOpen = false;
         keyInitialized = false;
+        sessionCounter = 0;
 
         random = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
         sha256 = MessageDigest.getInstance(MessageDigest.ALG_SHA_256, false);
@@ -58,12 +60,14 @@ public class MainApplet extends Applet implements Constants {
 
     public boolean select() {
         secureChannelOpen = false;
+        sessionCounter = 0;
         pin.reset();
         return true;
     }
 
     public void deselect() {
         secureChannelOpen = false;
+        sessionCounter = 0;
         pin.reset();
     }
 
@@ -201,6 +205,7 @@ public class MainApplet extends Applet implements Constants {
         Util.arrayCopy(buffer, ISO7816.OFFSET_CDATA, provisionedKey, (short) 0, MASTER_KEY_LEN);
         keyInitialized = true;
         secureChannelOpen = false;
+        sessionCounter = 0;
     }
 
     private void openSecureChannel(APDU apdu) {
@@ -219,6 +224,7 @@ public class MainApplet extends Applet implements Constants {
         deriveSessionKey();
 
         secureChannelOpen = true;
+        sessionCounter = 1;
 
         Util.arrayCopy(cardNonce, (short) 0, buffer, (short) 0, NONCE_LEN);
         apdu.setOutgoingAndSend((short) 0, NONCE_LEN);
@@ -232,6 +238,8 @@ public class MainApplet extends Applet implements Constants {
         if (!pin.check(buffer, ISO7816.OFFSET_CDATA, (byte) payloadLen)) {
             ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
         }
+
+        incrementSessionCounter();
     }
 
     private void secureChangePin(APDU apdu) {
@@ -240,6 +248,7 @@ public class MainApplet extends Applet implements Constants {
         short payloadLen = verifySecurePayload(buffer, ISO7816.OFFSET_CDATA, totalLen);
 
         changePinFromBuffer(buffer, ISO7816.OFFSET_CDATA, payloadLen);
+        incrementSessionCounter();
     }
 
     private void secureStoreSecret(APDU apdu) {
@@ -249,6 +258,7 @@ public class MainApplet extends Applet implements Constants {
 
         requirePin();
         storeSecretFromBuffer(buffer, ISO7816.OFFSET_CDATA, payloadLen);
+        incrementSessionCounter();
     }
 
     private void secureGetSecret(APDU apdu) {
@@ -258,6 +268,7 @@ public class MainApplet extends Applet implements Constants {
 
         requirePin();
         short outLen = getSecretFromBuffer(buffer, ISO7816.OFFSET_CDATA, payloadLen, buffer, (short) 0);
+        incrementSessionCounter();
         apdu.setOutgoingAndSend((short) 0, outLen);
     }
 
@@ -294,6 +305,8 @@ public class MainApplet extends Applet implements Constants {
         sha256.doFinal(digestBuffer, (short) 0, pos, digestBuffer, (short) 0);
 
         Util.arrayCopy(digestBuffer, (short) 0, sessionKey, (short) 0, SESSION_KEY_LEN);
+
+        Util.arrayFillNonAtomic(digestBuffer, (short) 0, (short) digestBuffer.length, (byte) 0);
     }
 
     private void computeMac(byte[] data, short dataOffset, short dataLen, byte[] out, short outOffset) {
@@ -302,6 +315,9 @@ public class MainApplet extends Applet implements Constants {
         Util.arrayCopy(sessionKey, (short) 0, digestBuffer, pos, SESSION_KEY_LEN);
         pos += SESSION_KEY_LEN;
 
+        digestBuffer[pos++] = (byte) (sessionCounter >> 8);
+        digestBuffer[pos++] = (byte) (sessionCounter & 0xFF);
+
         Util.arrayCopy(data, dataOffset, digestBuffer, pos, dataLen);
         pos += dataLen;
 
@@ -309,6 +325,17 @@ public class MainApplet extends Applet implements Constants {
         sha256.doFinal(digestBuffer, (short) 0, pos, digestBuffer, (short) 0);
 
         Util.arrayCopy(digestBuffer, (short) 0, out, outOffset, MAC_LEN);
+
+        Util.arrayFillNonAtomic(digestBuffer, (short) 0, (short) digestBuffer.length, (byte) 0);
+    }
+
+    private void incrementSessionCounter() {
+        if (sessionCounter == (short) 0x7FFF) {
+            secureChannelOpen = false;
+            sessionCounter = 0;
+            ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
+        }
+        sessionCounter++;
     }
 
     private void changePinFromBuffer(byte[] buffer, short offset, short len) {
