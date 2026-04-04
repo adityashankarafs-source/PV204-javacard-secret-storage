@@ -10,22 +10,19 @@ public class Main {
         }
 
         String command = args[0].toLowerCase();
-        CardManager cardManager = new CardManager();
-        cardManager.connect();
-        cardManager.openSecureSession();
 
         switch (command) {
             case "add":
-                handleAdd(args, cardManager);
+                handleAdd(args);
                 break;
             case "list":
-                handleList(cardManager);
+                handleList();
                 break;
             case "get":
-                handleGet(args, cardManager);
+                handleGet(args);
                 break;
             case "change-pin":
-                handleChangePin(args, cardManager);
+                handleChangePin(args);
                 break;
             case "help":
                 printHelp();
@@ -36,7 +33,14 @@ public class Main {
         }
     }
 
-    private static void handleAdd(String[] args, CardManager cardManager) {
+    private static CardManager connectToCard() {
+        CardManager cardManager = new CardManager();
+        cardManager.connect();
+        cardManager.openSecureSession();
+        return cardManager;
+    }
+
+    private static void handleAdd(String[] args) {
         if (args.length < 3) {
             System.out.println("Usage: add <name> <value>");
             return;
@@ -55,13 +59,17 @@ public class Main {
             return;
         }
 
+        CardManager cardManager = connectToCard();
+
         System.out.println("Action: Store Secret");
         System.out.println("Secret name: " + name);
         cardManager.sendCommand("STORE_SECRET");
         System.out.println("Result: Secret stored successfully (mock output).");
     }
 
-    private static void handleList(CardManager cardManager) {
+    private static void handleList() {
+        CardManager cardManager = connectToCard();
+
         System.out.println("Action: List Secrets");
         cardManager.sendCommand("LIST_SECRETS");
         System.out.println("Stored secrets:");
@@ -69,24 +77,28 @@ public class Main {
         System.out.println("- bank");
     }
 
-    private static void handleGet(String[] args, CardManager cardManager) {
+    private static void handleGet(String[] args) {
         if (args.length < 2) {
             System.out.println("Usage: get <name>");
             return;
         }
 
         String name = args[1];
+        CardManager cardManager = connectToCard();
+
         System.out.println("Action: Get Secret");
         System.out.println("Secret name: " + name);
         cardManager.sendCommand("GET_SECRET");
         System.out.println("Result: Secret value = mock-secret-value");
     }
 
-    private static void handleChangePin(String[] args, CardManager cardManager) {
+    private static void handleChangePin(String[] args) {
         if (args.length < 3) {
             System.out.println("Usage: change-pin <oldPin> <newPin>");
             return;
         }
+
+        CardManager cardManager = connectToCard();
 
         System.out.println("Action: Change PIN");
         cardManager.sendCommand("CHANGE_PIN");
