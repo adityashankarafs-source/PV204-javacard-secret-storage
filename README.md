@@ -1,9 +1,6 @@
+# PV204 JavaCard Secret Storage
 
-# PV204-javacard-secret-storage
-
-## PV204 JavaCard Secret Storage Project
-
-### Team Members
+## Team Members
 - Aditya Shankar
 - Ujjawal Kumar
 - Khaled Kamal Hegazy
@@ -11,18 +8,21 @@
 ## Project Description
 This project implements a secure secret storage system using JavaCard technology.
 
-The system allows:
-- storing secrets securely on a smartcard
+The system supports:
+- storing secrets securely on a smart card
 - listing stored secret names
 - retrieving secrets after PIN verification
 - changing the PIN securely
+- secure channel communication with replay protection
+- runtime key provisioning
 
 ## Repository Structure
 - `applet/` — JavaCard applet code
 - `client/` — client application
 - `docs/` — architecture and project documentation
-- `tests/` — test cases
-- `README.md` — project overview
+- `tests/` — test-related files
+- `libs/` — project libraries
+- `libs-sdks/` — local JavaCard SDK folder (not necessarily tracked in Git)
 
 ## Technology Stack
 - JavaCard
@@ -30,44 +30,25 @@ The system allows:
 - jCardSim
 - Gradle
 
-## Current Project Status
-- initial client prototype implemented
-- architecture documentation prepared
-- usage and test scenario documents prepared
-- ready for integration with applet and secure communication
+## Current Status
+Implemented so far:
+- applet functionality for secret storage
+- secure channel support
+- PIN verification flow
+- runtime key provisioning
+- test coverage for core applet flows
+- client CLI structure and command flow
+- project documentation and demo/test scenarios
 
-## Visible Client Features
-- help command
-- add secret command
-- list secrets command
-- get secret command
-- change-pin command
+## Local Setup
 
-## Example Commands
+### Prerequisites
+- Java installed
+- Gradle wrapper available in the project
+- JavaCard SDK available locally
 
-```bash
-java -cp client/src/main/java com.pv204.client.Main help
-java -cp client/src/main/java com.pv204.client.Main list
-java -cp client/src/main/java com.pv204.client.Main add gmail mypassword
-java -cp client/src/main/java com.pv204.client.Main get gmail
-java -cp client/src/main/java com.pv204.client.Main change-pin 1234 5678
-## Example Commands
+### JavaCard SDK Setup
+The project expects the following folder to exist locally:
 
-```bash
-java -cp client/src/main/java com.pv204.client.Main list
-java -cp client/src/main/java com.pv204.client.Main add gmail mypassword
-java -cp client/src/main/java com.pv204.client.Main get gmail
-java -cp client/src/main/java com.pv204.client.Main change-pin 1234 5678
-
-## Current Project Status
-- initial client prototype implemented
-- architecture documentation prepared
-- usage and test scenario documents prepared
-- ready for integration with applet and secure communication
-
-## Visible Client Features
-- help command
-- add secret command
-- list secrets command
-- get secret command
-- change-pin command
+```text
+libs-sdks/jc310b43_kit
