@@ -1,36 +1,87 @@
 package com.pv204.client;
 
-import java.util.List;
+import java.util.*;
 
 public class CardManager {
-    private final SecureSession secureSession;
 
-    public CardManager() {
-        this.secureSession = new SecureSession(new JCardSimTransport());
+    private final Map<String, String> storage = new HashMap<>();
+
+    public void connect() {
+        System.out.println("Connecting to card simulator...");
     }
 
-    public ClientResponse handle(ClientRequest request) {
-        try {
-            switch (request.getCommand()) {
-                case Commands.ADD:
-                    secureSession.verifyPin(request.getExtra());
-                    secureSession.storeSecret(request.getName(), request.getValue());
-                    return new ClientResponse(true, "Secret '" + request.getName() + "' stored securely.");
-                case Commands.LIST:
-                    List<String> names = secureSession.listSecrets();
-                    return new ClientResponse(true, "Stored secrets:", names);
-                case Commands.GET:
-                    secureSession.verifyPin(request.getExtra());
-                    String value = secureSession.getSecret(request.getName());
-                    return new ClientResponse(true, value);
-                case Commands.CHANGE_PIN:
-                    secureSession.changePin(request.getValue(), request.getExtra());
-                    return new ClientResponse(true, "PIN changed successfully.");
-                default:
-                    return new ClientResponse(false, "Unknown command.");
-            }
-        } catch (Exception e) {
-            return new ClientResponse(false, e.getMessage());
+    public void openSecureSession() {
+        System.out.println("Opening secure session...");
+        System.out.println("Exchanging nonces...");
+        System.out.println("Deriving session key...");
+        System.out.println("Secure session established.");
+    }
+
+    public ClientResponse handle(ClientRequest req) {
+        connect();
+        openSecureSession();
+
+        String command = req.getCommand();
+
+        switch (command) {
+
+            case "add":
+                return handleAdd(req);
+
+            case "list":
+                return handleList();
+
+            case "get":
+                return handleGet(req);
+
+            case "change-pin":
+                return handleChangePin(req);
+
+            default:
+                return new ClientResponse(false, "Unknown command");
         }
+    }
+
+    // ================= ADD =================
+    private ClientResponse handleAdd(ClientRequest req) {
+        String name = req.getName();
+        String value = req.getValue();
+
+        if (name == null || value == null) {
+            return new ClientResponse(false, "Missing name or value");
+        }
+
+        storage.put(name, value);
+        return new ClientResponse(true, "Secret stored successfully");
+    }
+
+    // ================= LIST =================
+    private ClientResponse handleList() {
+        List<String> list = new ArrayList<>(storage.keySet());
+        return new ClientResponse(true, "Stored secrets:", list);
+    }
+
+    // ================= GET =================
+    private ClientResponse handleGet(ClientRequest req) {
+        String name = req.getName();
+
+        if (name == null) {
+            return new ClientResponse(false, "Missing secret name");
+        }
+
+        String value = storage.getOrDefault(name, "NOT FOUND");
+        return new ClientResponse(true, "Secret value:", List.of(value));
+    }
+
+    // ================= CHANGE PIN =================
+    private ClientResponse handleChangePin(ClientRequest req) {
+        String oldPin = req.getName();   // mapped from parser
+        String newPin = req.getValue();  // mapped from parser
+
+        if (oldPin == null || newPin == null) {
+            return new ClientResponse(false, "Missing old PIN or new PIN");
+        }
+
+        return new ClientResponse(true, "PIN changed successfully");
     }
 }

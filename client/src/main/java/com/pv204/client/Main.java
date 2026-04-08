@@ -1,46 +1,48 @@
 package com.pv204.client;
 
+import java.util.Scanner;
+
 public class Main {
+
     public static void main(String[] args) {
-        System.out.println("PV204 JavaCard Secret Storage Client");
 
-        if (args.length == 0) {
-            printUsage();
-            return;
-        }
+        System.out.println("=== PV204 JavaCard Secret Storage Client ===");
 
-        try {
-            CommandParser parser = new CommandParser();
-            ClientRequest request = parser.parse(args);
-            if ("help".equals(request.getCommand())) {
-                printUsage();
-                return;
+        CardManager manager = new CardManager();
+        Scanner scanner = new Scanner(System.in);
+
+        while (true) {
+            System.out.print("> ");
+            String line = scanner.nextLine();
+
+            if (line.equalsIgnoreCase("exit")) {
+                System.out.println("Exiting...");
+                break;
             }
 
-            CardManager cardManager = new CardManager();
-            ClientResponse response = cardManager.handle(request);
+            try {
+                String[] input = line.split(" ");
+                CommandParser parser = new CommandParser();
+                ClientRequest request = parser.parse(input);
 
-            if (!response.isSuccess()) {
-                System.out.println("ERROR: " + response.getMessage());
-                return;
-            }
+                ClientResponse response = manager.handle(request);
 
-            System.out.println(response.getMessage());
-            if (response.getData() != null) {
-                for (String value : response.getData()) {
-                    System.out.println("- " + value);
+                if (!response.isSuccess()) {
+                    System.out.println("ERROR: " + response.getMessage());
+                    continue;
                 }
-            }
-        } catch (Exception e) {
-            System.out.println("ERROR: " + e.getMessage());
-        }
-    }
 
-    private static void printUsage() {
-        System.out.println("Usage:");
-        System.out.println("  add <pin> <name> <value>");
-        System.out.println("  list");
-        System.out.println("  get <pin> <name>");
-        System.out.println("  change-pin <oldPin> <newPin>");
+                System.out.println(response.getMessage());
+
+                if (response.getData() != null) {
+                    for (String s : response.getData()) {
+                        System.out.println("- " + s);
+                    }
+                }
+
+            } catch (Exception e) {
+                System.out.println("ERROR: " + e.getMessage());
+            }
+        }
     }
 }
