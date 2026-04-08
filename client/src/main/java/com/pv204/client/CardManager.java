@@ -1,30 +1,36 @@
 package com.pv204.client;
 
-public class CardManager {
+import java.util.List;
 
-    private String masterKey;
+public class CardManager {
+    private final SecureSession secureSession;
 
     public CardManager() {
-        this.masterKey = System.getenv("MASTER_KEY");
+        this.secureSession = new SecureSession(new JCardSimTransport());
+    }
 
-        if (this.masterKey == null) {
-            System.out.println("Warning: MASTER_KEY not set. Using default (insecure).");
-            this.masterKey = "default-key";
+    public ClientResponse handle(ClientRequest request) {
+        try {
+            switch (request.getCommand()) {
+                case Commands.ADD:
+                    secureSession.verifyPin(request.getExtra());
+                    secureSession.storeSecret(request.getName(), request.getValue());
+                    return new ClientResponse(true, "Secret '" + request.getName() + "' stored securely.");
+                case Commands.LIST:
+                    List<String> names = secureSession.listSecrets();
+                    return new ClientResponse(true, "Stored secrets:", names);
+                case Commands.GET:
+                    secureSession.verifyPin(request.getExtra());
+                    String value = secureSession.getSecret(request.getName());
+                    return new ClientResponse(true, value);
+                case Commands.CHANGE_PIN:
+                    secureSession.changePin(request.getValue(), request.getExtra());
+                    return new ClientResponse(true, "PIN changed successfully.");
+                default:
+                    return new ClientResponse(false, "Unknown command.");
+            }
+        } catch (Exception e) {
+            return new ClientResponse(false, e.getMessage());
         }
-    }
-
-    public void connect() {
-        System.out.println("Connecting to card simulator...");
-    }
-
-    public void openSecureSession() {
-        System.out.println("Opening secure session...");
-        System.out.println("Exchanging nonces...");
-        System.out.println("Deriving session key...");
-        System.out.println("Secure session established (mock).");
-    }
-
-    public void sendCommand(String command) {
-        System.out.println("Simulating command send: " + command);
     }
 }
