@@ -5,50 +5,37 @@
 - Ujjawal Kumar
 - Khaled Kamal Hegazy
 
-## Project Description
-This project implements a secure secret storage system using JavaCard technology.
+---
 
-The system supports:
-- storing secrets securely on a smart card
-- listing stored secret names
-- retrieving secrets after PIN verification
-- changing the PIN securely
-- secure channel communication with replay protection
-- runtime key provisioning
+## Project Overview
+
+This project implements a **secure secret storage system using JavaCard technology**.
+
+The system allows users to:
+- securely store secrets on a smart card
+- list stored secret names
+- retrieve secrets after PIN verification
+- securely change the PIN
+- communicate using a **secure channel with replay protection**
+
+---
+
+## Key Features
+
+Core Functionality
+- PIN-based authentication
+- Secret storage (name + value)
+- Secret retrieval
+- Secret listing
+- Secure PIN change
+
+Security Features
+- Secure channel (challenge-response using nonces)
+- Session key derivation using SHA-256
+- Message authentication (MAC)
+- Replay attack protection (counter-based)
+- Encrypted communication (stream cipher style XOR)
+
+---
 
 ## Repository Structure
-- `applet/` — JavaCard applet code
-- `client/` — client application
-- `docs/` — architecture and project documentation
-- `tests/` — test-related files
-- `libs/` — project libraries
-- `libs-sdks/` — local JavaCard SDK folder (not necessarily tracked in Git)
-
-## Technology Stack
-- JavaCard
-- Java
-- jCardSim
-- Gradle
-
-## Current Status
-Implemented so far:
-- applet functionality for secret storage
-- secure channel support
-- PIN verification flow
-- runtime key provisioning
-- test coverage for core applet flows
-- client CLI structure and command flow
-- project documentation and demo/test scenarios
-
-## Local Setup
-
-### Prerequisites
-- Java installed
-- Gradle wrapper available in the project
-- JavaCard SDK available locally
-
-### JavaCard SDK Setup
-The project expects the following folder to exist locally:
-
-```text
-libs-sdks/jc310b43_kit
