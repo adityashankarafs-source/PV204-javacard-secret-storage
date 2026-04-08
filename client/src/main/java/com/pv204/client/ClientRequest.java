@@ -2,16 +2,16 @@ package com.pv204.client;
 
 public class ClientRequest {
 
-    private String command;
-    private String name;
-    private String value;
-    private String extra;
+    private final String command;
+    private final String name;
+    private final String value;
+    private final String pin;
 
-    public ClientRequest(String command, String name, String value, String extra) {
+    public ClientRequest(String command, String name, String value, String pin) {
         this.command = command;
         this.name = name;
         this.value = value;
-        this.extra = extra;
+        this.pin = pin;
     }
 
     public String getCommand() {
@@ -26,7 +26,7 @@ public class ClientRequest {
         return value;
     }
 
-    public String getExtra() {
-        return extra;
+    public String getPin() {
+        return pin;
     }
 }
