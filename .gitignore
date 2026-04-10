@@ -6,6 +6,26 @@ mingw64/
 build/
 out/
 
+# temp / accidental files
+*
+!*.java
+!*.md
+!*.gradle
+!gradlew
+!gradlew.bat
+!settings.gradle
+!build.gradle
+!src/
+!.gitignore
+
+# OS junk
+Thumbs.db
+.DS_Store
+
+# build
+build/
+.gradle/
+
 
 
 
