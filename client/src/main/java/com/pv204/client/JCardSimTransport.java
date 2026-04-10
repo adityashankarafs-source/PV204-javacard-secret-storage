@@ -8,15 +8,15 @@ import javacard.framework.AID;
 import javax.smartcardio.CommandAPDU;
 import javax.smartcardio.ResponseAPDU;
 
-public class JCardSimTransport {
-
+public class JCardSimTransport implements ApduTransport {
     private static final String APPLET_AID_HEX = "01FFFF0405060708090102";
 
     private CardSimulator simulator;
-    private boolean initialized = false;
+    private boolean connected;
 
+    @Override
     public void connect() {
-        if (initialized) {
+        if (connected) {
             return;
         }
 
@@ -24,13 +24,13 @@ public class JCardSimTransport {
         AID aid = AIDUtil.create(APPLET_AID_HEX);
         simulator.installApplet(aid, MainApplet.class);
         simulator.selectApplet(aid);
-
-        initialized = true;
+        connected = true;
     }
 
+    @Override
     public ResponseAPDU transmit(CommandAPDU command) {
-        if (!initialized) {
-            throw new IllegalStateException("Transport not connected");
+        if (!connected) {
+            connect();
         }
         return simulator.transmitCommand(command);
     }

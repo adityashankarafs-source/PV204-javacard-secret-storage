@@ -1,5 +1,9 @@
 package com.pv204.client;
 
+import javax.smartcardio.CommandAPDU;
+import javax.smartcardio.ResponseAPDU;
+
 public interface ApduTransport {
-    TransportResponse transmit(byte cla, byte ins, byte p1, byte p2, byte[] data);
+    void connect() throws Exception;
+    ResponseAPDU transmit(CommandAPDU command) throws Exception;
 }

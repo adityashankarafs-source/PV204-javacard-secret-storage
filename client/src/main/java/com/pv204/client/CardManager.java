@@ -1,27 +1,71 @@
 package com.pv204.client;
 
+import java.util.List;
+
 public class CardManager {
-    private final String masterKey;
+    private final ApduTransport transport;
+    private final SecureSession secureSession;
 
-    public CardManager() {
-        this.masterKey = System.getenv("MASTER_KEY");
-        if (this.masterKey == null || this.masterKey.trim().isEmpty()) {
-            throw new IllegalStateException("MASTER_KEY not set");
+    public CardManager() throws Exception {
+        this.transport = new JCardSimTransport();
+        this.transport.connect();
+        this.secureSession = new SecureSession(transport);
+    }
+
+    public String init(String keyInput) throws Exception {
+        byte[] key = parseKey(keyInput);
+        secureSession.initMasterKey(key);
+        return "Master key initialized.";
+    }
+
+    public String open() throws Exception {
+        secureSession.openSecureChannel();
+        return "Secure channel opened.";
+    }
+
+    public String verify(String pin) throws Exception {
+        secureSession.secureVerifyPin(pin);
+        return "PIN verified.";
+    }
+
+    public String store(String name, String value) throws Exception {
+        secureSession.secureStore(name, value);
+        return "Secret stored: " + name;
+    }
+
+    public List<String> list() throws Exception {
+        return secureSession.secureList();
+    }
+
+    public String get(String name) throws Exception {
+        return secureSession.secureGet(name);
+    }
+
+    public String changePin(String oldPin, String newPin) throws Exception {
+        secureSession.secureChangePin(oldPin, newPin);
+        return "PIN changed successfully.";
+    }
+
+    private byte[] parseKey(String keyInput) {
+        if (keyInput == null) {
+            throw new IllegalArgumentException("Key is required");
         }
-    }
 
-    public void connect() {
-        System.out.println("Connecting to card simulator...");
-    }
+        String trimmed = keyInput.trim();
 
-    public void openSecureSession() {
-        System.out.println("Opening secure session...");
-        System.out.println("Exchanging nonces...");
-        System.out.println("Deriving session key...");
-        System.out.println("Secure session established.");
-    }
+        if (trimmed.matches("(?i)[0-9a-f]{32}")) {
+            byte[] out = new byte[16];
+            for (int i = 0; i < 16; i++) {
+                out[i] = (byte) Integer.parseInt(trimmed.substring(i * 2, i * 2 + 2), 16);
+            }
+            return out;
+        }
 
-    public void sendCommand(String command) {
-        System.out.println("Simulating command send: " + command);
+        byte[] ascii = trimmed.getBytes();
+        if (ascii.length == 16) {
+            return ascii;
+        }
+
+        throw new IllegalArgumentException("Key must be either 32 hex chars or exactly 16 ASCII chars");
     }
 }
