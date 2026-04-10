@@ -16,6 +16,7 @@ public interface Constants {
     byte INS_SECURE_STORE_SECRET = 0x33;
     byte INS_SECURE_GET_SECRET = 0x34;
     byte INS_SECURE_LIST_SECRETS = 0x35;
+    byte INS_INIT_MASTER_KEY = 0x36;
 
     short MAX_SECRETS = 10;
     byte MAX_NAME_LEN = 32;

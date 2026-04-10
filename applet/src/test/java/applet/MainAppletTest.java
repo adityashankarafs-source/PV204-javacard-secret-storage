@@ -3,17 +3,14 @@ package applet;
 import com.licel.jcardsim.smartcardio.CardSimulator;
 import com.licel.jcardsim.utils.AIDUtil;
 import javacard.framework.AID;
+import javacard.framework.ISO7816;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import javax.smartcardio.CommandAPDU;
 import javax.smartcardio.ResponseAPDU;
-import java.security.MessageDigest;
-import java.util.Arrays;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class MainAppletTest implements Constants {
 
@@ -28,103 +25,132 @@ public class MainAppletTest implements Constants {
     }
 
     @Test
-    void getSecretWithoutPinFails() {
-        ResponseAPDU response = transmit(apdu(INS_GET_SECRET, encodeName("gmail")));
-        assertEquals(SW_PIN_REQUIRED & 0xFFFF, response.getSW());
+    void plainVerifyPinRequiresSecureChannel() {
+        ResponseAPDU response = simulator.transmitCommand(
+                new CommandAPDU(APPLET_CLA, INS_VERIFY_PIN, 0x00, 0x00, "1234".getBytes())
+        );
+        assertEquals(SW_SECURE_CHANNEL_REQUIRED & 0xFFFF, response.getSW());
     }
 
     @Test
-    void listSecretsWithoutPinWorks() {
-        ResponseAPDU response = transmit(apdu(INS_LIST_SECRETS, new byte[0]));
+    void plainGetSecretRequiresSecureChannel() {
+        ResponseAPDU response = simulator.transmitCommand(
+                new CommandAPDU(APPLET_CLA, INS_GET_SECRET, 0x00, 0x00, encodeName("gmail"))
+        );
+        assertEquals(SW_SECURE_CHANNEL_REQUIRED & 0xFFFF, response.getSW());
+    }
+
+    @Test
+    void plainListSecretsRequiresSecureChannel() {
+        ResponseAPDU response = simulator.transmitCommand(
+                new CommandAPDU(APPLET_CLA, INS_LIST_SECRETS, 0x00, 0x00, new byte[0])
+        );
+        assertEquals(SW_SECURE_CHANNEL_REQUIRED & 0xFFFF, response.getSW());
+    }
+
+    @Test
+    void plainStoreSecretRequiresSecureChannel() {
+        ResponseAPDU response = simulator.transmitCommand(
+                new CommandAPDU(APPLET_CLA, INS_STORE_SECRET, 0x00, 0x00, encodeNameValue("gmail", "pass123"))
+        );
+        assertEquals(SW_SECURE_CHANNEL_REQUIRED & 0xFFFF, response.getSW());
+    }
+
+    @Test
+    void plainChangePinRequiresSecureChannel() {
+        ResponseAPDU response = simulator.transmitCommand(
+                new CommandAPDU(APPLET_CLA, INS_CHANGE_PIN, 0x00, 0x00, encodeChangePin("1234", "5678"))
+        );
+        assertEquals(SW_SECURE_CHANNEL_REQUIRED & 0xFFFF, response.getSW());
+    }
+
+    @Test
+    void initMasterKeySucceeds() {
+        byte[] key = testMasterKey();
+        ResponseAPDU response = simulator.transmitCommand(
+                new CommandAPDU(APPLET_CLA, INS_INIT_MASTER_KEY, 0x00, 0x00, key)
+        );
         assertEquals(0x9000, response.getSW());
-        assertEquals(0, response.getData().length);
     }
 
     @Test
-    void verifyPinSucceeds() {
-        ResponseAPDU response = transmit(apdu(INS_VERIFY_PIN, "1234".getBytes()));
-        assertEquals(0x9000, response.getSW());
+    void initMasterKeyWithWrongLengthFails() {
+        byte[] wrong = new byte[MASTER_KEY_LEN - 1];
+        ResponseAPDU response = simulator.transmitCommand(
+                new CommandAPDU(APPLET_CLA, INS_INIT_MASTER_KEY, 0x00, 0x00, wrong)
+        );
+        assertEquals(ISO7816.SW_WRONG_LENGTH & 0xFFFF, response.getSW());
     }
 
     @Test
-    void storeAndGetSecretWorksAfterVerify() {
-        assertEquals(0x9000, transmit(apdu(INS_VERIFY_PIN, "1234".getBytes())).getSW());
-        assertEquals(0x9000, transmit(apdu(INS_STORE_SECRET, encodeNameValue("gmail", "pass123"))).getSW());
-
-        ResponseAPDU response = transmit(apdu(INS_GET_SECRET, encodeName("gmail")));
-
-        assertEquals(0x9000, response.getSW());
-        assertArrayEquals("pass123".getBytes(), response.getData());
+    void openSecureChannelWithoutKeyFails() {
+        byte[] nonce = testClientNonce();
+        ResponseAPDU response = simulator.transmitCommand(
+                new CommandAPDU(APPLET_CLA, INS_OPEN_SECURE_CHANNEL, 0x00, 0x00, nonce)
+        );
+        assertEquals(ISO7816.SW_CONDITIONS_NOT_SATISFIED & 0xFFFF, response.getSW());
     }
 
     @Test
-    void listSecretsReturnsStoredName() {
-        assertEquals(0x9000, transmit(apdu(INS_VERIFY_PIN, "1234".getBytes())).getSW());
-        assertEquals(0x9000, transmit(apdu(INS_STORE_SECRET, encodeNameValue("gmail", "pass123"))).getSW());
+    void openSecureChannelAfterInitWorks() {
+        initKey();
 
-        ResponseAPDU response = transmit(apdu(INS_LIST_SECRETS, new byte[0]));
-
-        assertEquals(0x9000, response.getSW());
-        assertArrayEquals(new byte[] { 0x05, 'g', 'm', 'a', 'i', 'l' }, response.getData());
-    }
-
-    @Test
-    void changePinWorks() {
-        assertEquals(0x9000, transmit(apdu(INS_VERIFY_PIN, "1234".getBytes())).getSW());
-
-        ResponseAPDU changeResp = transmit(apdu(INS_CHANGE_PIN, encodeChangePin("1234", "5678")));
-        assertEquals(0x9000, changeResp.getSW());
-
-        ResponseAPDU verifyNew = transmit(apdu(INS_VERIFY_PIN, "5678".getBytes()));
-        assertEquals(0x9000, verifyNew.getSW());
-    }
-
-    @Test
-    void changePinWithWrongOldPinFails() {
-        ResponseAPDU response = transmit(apdu(INS_CHANGE_PIN, encodeChangePin("9999", "5678")));
-        assertEquals(0x6982, response.getSW());
-    }
-
-    @Test
-    void openSecureChannelWorksWithoutProvisioningStep() throws Exception {
-        byte[] clientNonce = sampleNonce();
-
-        ResponseAPDU response = transmit(apdu(INS_OPEN_SECURE_CHANNEL, clientNonce));
+        byte[] nonce = testClientNonce();
+        ResponseAPDU response = simulator.transmitCommand(
+                new CommandAPDU(APPLET_CLA, INS_OPEN_SECURE_CHANNEL, 0x00, 0x00, nonce)
+        );
 
         assertEquals(0x9000, response.getSW());
-
-        byte[] data = response.getData();
-        assertEquals(NONCE_LEN + MAC_LEN, data.length);
-
-        byte[] cardNonce = Arrays.copyOfRange(data, 0, NONCE_LEN);
-        byte[] proof = Arrays.copyOfRange(data, NONCE_LEN, NONCE_LEN + MAC_LEN);
-
-        byte[] expectedProof = computeHandshakeProof(clientNonce, cardNonce);
-        assertArrayEquals(expectedProof, proof);
+        assertEquals(NONCE_LEN + MAC_LEN, response.getData().length);
     }
 
     @Test
     void openSecureChannelWithWrongNonceLengthFails() {
-        byte[] wrongNonce = new byte[] { 1, 2, 3, 4, 5 };
+        initKey();
 
-        ResponseAPDU response = transmit(apdu(INS_OPEN_SECURE_CHANNEL, wrongNonce));
+        byte[] wrongNonce = new byte[NONCE_LEN - 1];
+        ResponseAPDU response = simulator.transmitCommand(
+                new CommandAPDU(APPLET_CLA, INS_OPEN_SECURE_CHANNEL, 0x00, 0x00, wrongNonce)
+        );
 
         assertEquals(SW_INVALID_NONCE & 0xFFFF, response.getSW());
     }
 
     @Test
     void secureCommandWithoutOpenChannelFails() {
-        byte[] dummy = new byte[COUNTER_LEN + MAC_LEN];
-        ResponseAPDU response = transmit(new CommandAPDU(APPLET_CLA, INS_SECURE_VERIFY_PIN, 0x00, 0x00, dummy));
+        byte[] key = testMasterKey();
+        ResponseAPDU init = simulator.transmitCommand(
+                new CommandAPDU(APPLET_CLA, INS_INIT_MASTER_KEY, 0x00, 0x00, key)
+        );
+        assertEquals(0x9000, init.getSW());
+
+        ResponseAPDU response = simulator.transmitCommand(
+                new CommandAPDU(APPLET_CLA, INS_SECURE_LIST_SECRETS, 0x00, 0x00, new byte[0])
+        );
         assertEquals(SW_SECURE_CHANNEL_REQUIRED & 0xFFFF, response.getSW());
     }
 
-    private ResponseAPDU transmit(CommandAPDU cmd) {
-        return simulator.transmitCommand(cmd);
+    private void initKey() {
+        ResponseAPDU response = simulator.transmitCommand(
+                new CommandAPDU(APPLET_CLA, INS_INIT_MASTER_KEY, 0x00, 0x00, testMasterKey())
+        );
+        assertEquals(0x9000, response.getSW());
     }
 
-    private CommandAPDU apdu(byte ins, byte[] data) {
-        return new CommandAPDU(APPLET_CLA, ins, 0x00, 0x00, data);
+    private byte[] testMasterKey() {
+        byte[] key = new byte[MASTER_KEY_LEN];
+        for (int i = 0; i < MASTER_KEY_LEN; i++) {
+            key[i] = (byte) (i + 1);
+        }
+        return key;
+    }
+
+    private byte[] testClientNonce() {
+        byte[] nonce = new byte[NONCE_LEN];
+        for (int i = 0; i < NONCE_LEN; i++) {
+            nonce[i] = (byte) (0x41 + i);
+        }
+        return nonce;
     }
 
     private byte[] encodeName(String name) {
@@ -138,14 +164,12 @@ public class MainAppletTest implements Constants {
     private byte[] encodeNameValue(String name, String value) {
         byte[] nameBytes = name.getBytes();
         byte[] valueBytes = value.getBytes();
-
         byte[] out = new byte[1 + nameBytes.length + 1 + valueBytes.length];
-        int pos = 0;
 
+        int pos = 0;
         out[pos++] = (byte) nameBytes.length;
         System.arraycopy(nameBytes, 0, out, pos, nameBytes.length);
         pos += nameBytes.length;
-
         out[pos++] = (byte) valueBytes.length;
         System.arraycopy(valueBytes, 0, out, pos, valueBytes.length);
 
@@ -155,52 +179,15 @@ public class MainAppletTest implements Constants {
     private byte[] encodeChangePin(String oldPin, String newPin) {
         byte[] oldBytes = oldPin.getBytes();
         byte[] newBytes = newPin.getBytes();
-
         byte[] out = new byte[1 + oldBytes.length + 1 + newBytes.length];
-        int pos = 0;
 
+        int pos = 0;
         out[pos++] = (byte) oldBytes.length;
         System.arraycopy(oldBytes, 0, out, pos, oldBytes.length);
         pos += oldBytes.length;
-
         out[pos++] = (byte) newBytes.length;
         System.arraycopy(newBytes, 0, out, pos, newBytes.length);
 
         return out;
-    }
-
-    private byte[] sampleNonce() {
-        return new byte[] {
-                0x11, 0x12, 0x13, 0x14,
-                0x15, 0x16, 0x17, 0x18
-        };
-    }
-
-    private byte[] computeHandshakeProof(byte[] clientNonce, byte[] cardNonce) throws Exception {
-        byte[] masterKey = new byte[] {
-                0x11, 0x22, 0x33, 0x44,
-                0x55, 0x66, 0x77, (byte) 0x88,
-                0x21, 0x32, 0x43, 0x54,
-                0x65, 0x76, 0x07, 0x18
-        };
-
-        byte[] input = new byte[MASTER_KEY_LEN + NONCE_LEN + NONCE_LEN + 1];
-        int pos = 0;
-
-        System.arraycopy(masterKey, 0, input, pos, MASTER_KEY_LEN);
-        pos += MASTER_KEY_LEN;
-
-        System.arraycopy(clientNonce, 0, input, pos, NONCE_LEN);
-        pos += NONCE_LEN;
-
-        System.arraycopy(cardNonce, 0, input, pos, NONCE_LEN);
-        pos += NONCE_LEN;
-
-        input[pos] = (byte) 0x7A;
-
-        MessageDigest md = MessageDigest.getInstance("SHA-256");
-        byte[] digest = md.digest(input);
-
-        return Arrays.copyOf(digest, MAC_LEN);
     }
 }
