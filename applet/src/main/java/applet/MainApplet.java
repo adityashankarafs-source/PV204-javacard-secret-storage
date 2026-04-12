@@ -37,13 +37,13 @@ public class MainApplet extends Applet implements Constants {
 
         secretStore = new SecretStore();
 
-        masterKey = JCSystem.makeTransientByteArray(MASTER_KEY_LEN, JCSystem.CLEAR_ON_DESELECT);
-        clientNonce = new byte[NONCE_LEN];
-        cardNonce = new byte[NONCE_LEN];
-        sessionKey = new byte[SESSION_KEY_LEN];
+        masterKey = new byte[MASTER_KEY_LEN];
+        clientNonce = JCSystem.makeTransientByteArray(NONCE_LEN, JCSystem.CLEAR_ON_DESELECT);
+        cardNonce = JCSystem.makeTransientByteArray(NONCE_LEN, JCSystem.CLEAR_ON_DESELECT);
+        sessionKey = JCSystem.makeTransientByteArray(SESSION_KEY_LEN, JCSystem.CLEAR_ON_DESELECT);
         macBuffer = JCSystem.makeTransientByteArray(MAC_LEN, JCSystem.CLEAR_ON_DESELECT);
-        digestBuffer = new byte[SHA256_LEN];
-        workBuffer = new byte[128];
+        digestBuffer = JCSystem.makeTransientByteArray(SHA256_LEN, JCSystem.CLEAR_ON_DESELECT);
+        workBuffer = JCSystem.makeTransientByteArray((short) 300, JCSystem.CLEAR_ON_DESELECT);
 
         secureChannelOpen = false;
         keyInitialized = false;
@@ -78,12 +78,12 @@ public class MainApplet extends Applet implements Constants {
         Util.arrayFillNonAtomic(sessionKey, (short) 0, SESSION_KEY_LEN, (byte) 0);
         Util.arrayFillNonAtomic(clientNonce, (short) 0, NONCE_LEN, (byte) 0);
         Util.arrayFillNonAtomic(cardNonce, (short) 0, NONCE_LEN, (byte) 0);
-        Util.arrayFillNonAtomic(masterKey, (short) 0, MASTER_KEY_LEN, (byte) 0);
+        //Util.arrayFillNonAtomic(masterKey, (short) 0, MASTER_KEY_LEN, (byte) 0);
         Util.arrayFillNonAtomic(macBuffer, (short) 0, MAC_LEN, (byte) 0);
         Util.arrayFillNonAtomic(digestBuffer, (short) 0, SHA256_LEN, (byte) 0);
         Util.arrayFillNonAtomic(workBuffer, (short) 0, (short) workBuffer.length, (byte) 0);
 
-        keyInitialized = false;
+        //keyInitialized = false;
     }
 
     public void process(APDU apdu) {
@@ -162,6 +162,10 @@ public class MainApplet extends Applet implements Constants {
     }
 
     private void initMasterKey(APDU apdu) {
+        if (keyInitialized) {
+            ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
+        }
+
         byte[] buffer = apdu.getBuffer();
         short len = apdu.setIncomingAndReceive();
 
@@ -281,11 +285,6 @@ public class MainApplet extends Applet implements Constants {
             ISOException.throwIt(SW_INVALID_DATA);
         }
 
-        short counter = Util.getShort(buffer, dataOffset);
-        if (counter != expectedCounter) {
-            ISOException.throwIt(SW_REPLAY_DETECTED);
-        }
-
         short cipherOffset = (short) (dataOffset + COUNTER_LEN);
         short cipherLen = (short) (totalLen - COUNTER_LEN - MAC_LEN);
         short providedMacOffset = (short) (cipherOffset + cipherLen);
@@ -301,6 +300,11 @@ public class MainApplet extends Applet implements Constants {
         );
 
         if (Util.arrayCompare(buffer, providedMacOffset, macBuffer, (short) 0, MAC_LEN) != 0) {
+            ISOException.throwIt(SW_INVALID_MAC);
+        }
+        
+        short counter = Util.getShort(buffer, dataOffset);
+        if (counter != expectedCounter) {
             ISOException.throwIt(SW_INVALID_MAC);
         }
 

@@ -118,7 +118,7 @@ public class MainAppletWithSecurity implements Constants {
         assertEquals(0x9000, ok.getSW());
 
         ResponseAPDU replay = transmit(first);
-        assertEquals(SW_REPLAY_DETECTED & 0xFFFF, replay.getSW());
+        assertEquals(SW_INVALID_MAC & 0xFFFF, replay.getSW());
     }
 
     @Test
